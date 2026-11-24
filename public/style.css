@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; --accent: #ff66aa; }
+body { font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; margin: 0; padding: 24px; line-height: 1.6; }
+main { max-width: 960px; margin: 0 auto; }
+h1 { color: var(--accent); margin-top: 0; }
+.card { border: 1px solid #8884; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+.card h2 { margin-top: 0; font-size: 1.1rem; }
+form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+label { display: flex; flex-direction: column; font-size: 0.9rem; gap: 4px; }
+input { padding: 6px 8px; font-size: 1rem; border: 1px solid #8886; border-radius: 6px; }
+button { padding: 7px 14px; font-size: 1rem; border: none; border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; }
+button.secondary { background: #8886; }
+.note { font-size: 0.9rem; opacity: 0.8; }
+.status { white-space: pre-wrap; }

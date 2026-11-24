@@ -1,0 +1,27 @@
+{
+  "name": "osu-farm-finder",
+  "version": "0.1.0",
+  "description": "Find osu! pp farm maps that players similar to you have farmed but you haven't. Runs locally with your own osu! API client.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "osu-farm-finder": "bin/osu-farm-finder.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "public"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node bin/osu-farm-finder.js",
+    "test": "node --test test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/s-shibasaki/osu-farm-finder.git"
+  },
+  "keywords": ["osu", "osu!", "pp", "farm", "recommendation"]
+}
