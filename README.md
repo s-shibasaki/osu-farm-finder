@@ -51,6 +51,7 @@ osu!（リズムゲーム）で、**自分と実力や好みが近いプレイ�
 
 1. [Node.js の公式サイト](https://nodejs.org/ja) を開き、「LTS」（長期サポート版）と書かれたものをダウンロードしてインストールします。
    - Windows では、ターミナルに `winget install OpenJS.NodeJS.LTS` と入力してインストールすることもできます。
+   - 複数のバージョンの Node.js を切り替えて使いたい場合は、バージョン管理ツールを使う方法もあります。macOS・Linux では [nvm](https://github.com/nvm-sh/nvm)、Windows では [nvm-windows](https://github.com/coreybutler/nvm-windows) が代表的です。nvm-windows の場合は、`winget install CoreyButler.NVMforWindows` でインストールし、ターミナルを開き直してから `nvm install lts` と `nvm use lts` を実行します（バージョンによっては、ターミナルを管理者として開く必要があります）。
 2. インストールが終わったら、**開いているターミナルをすべて閉じて、新しく開き直します**。開き直さないと、インストールしたことがターミナルに反映されません。
 3. インストールできたかを確かめます。ターミナルを開いて、次のコマンドを入力します。
    - ターミナルの開き方：Windows では「スタート」メニューで「ターミナル」または「PowerShell」と検索します。macOS では「アプリケーション」→「ユーティリティ」→「ターミナル」を開きます。
