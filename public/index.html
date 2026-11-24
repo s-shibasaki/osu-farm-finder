@@ -34,6 +34,33 @@
       </form>
       <pre id="user-result" class="status"></pre>
     </section>
+
+    <section id="collect" class="card">
+      <h2>データ取得（開発中の試験用画面）</h2>
+      <p class="note">
+        入力したプレイヤーと pp が近いプレイヤーを集め、それぞれのベストスコアを取得します。
+        osu! への問い合わせは1秒に1回程度に抑えているため、初回は250人で4〜5分かかります。
+        取得したデータはこのPCに一時保存され、2回目以降は速くなります。
+      </p>
+      <form id="collect-form">
+        <label>ユーザー名 <input name="username" required></label>
+        <label>比べる相手
+          <select name="scope">
+            <option value="country">同じ国のプレイヤー</option>
+            <option value="global">世界のプレイヤー</option>
+          </select>
+        </label>
+        <label>人数 <input name="count" type="number" min="20" max="1000" value="250"></label>
+        <button type="submit" id="collect-start">取得を始める</button>
+        <button type="button" id="collect-cancel" class="secondary" hidden>中止</button>
+      </form>
+      <progress id="collect-progress" max="1" value="0" hidden></progress>
+      <pre id="collect-status" class="status"></pre>
+      <p class="note">
+        一時保存しているデータ：<span id="cache-stats">-</span>
+        <button type="button" id="cache-clear" class="secondary small">一時保存データを削除</button>
+      </p>
+    </section>
   </main>
   <script type="module" src="/app.js"></script>
 </body>
