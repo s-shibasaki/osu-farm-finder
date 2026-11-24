@@ -79,7 +79,7 @@ td.map a:hover .title { color: var(--accent); }
 .badge { display: inline-block; font-size: 0.72rem; padding: 1px 7px; border-radius: 999px; margin: 2px 4px 0 0; }
 .badge.retry { background: #f2a93b33; color: #c77a00; }
 .badge.same { background: #4a90e233; color: #3a78c2; }
-.speed { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.speed { display: inline-block; white-space: nowrap; padding: 1px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 .s-NM { background: #8882; }
 .s-DT { background: #9b59b633; color: #9b59b6; }
 .s-HT { background: #16a08533; color: #16a085; }
