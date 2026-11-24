@@ -9,6 +9,20 @@ if (major < 18) {
 }
 
 const args = process.argv.slice(2);
+
+// Experimental: measure random-id sampling (see src/probe.js).
+const probeArg = args.find((a) => a.startsWith('--probe='));
+if (probeArg) {
+  const { runProbe } = await import('../src/probe.js');
+  const callsArg = args.find((a) => a.startsWith('--calls='));
+  try {
+    await runProbe({ username: probeArg.split('=')[1], calls: callsArg ? Number(callsArg.split("=")[1]) : 100 });
+    process.exit(0);
+  } catch (e) {
+    console.error(`\nエラー: ${e.message}`);
+    process.exit(1);
+  }
+}
 const portArg = args.find((a) => a.startsWith('--port='));
 let port = portArg ? Number(portArg.split('=')[1]) : Number(process.env.PORT) || 3000;
 const noOpen = args.includes('--no-open');

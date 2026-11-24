@@ -97,6 +97,13 @@ export class OsuApi {
     return this.get(`/users/${userId}/scores/best`, { mode, limit, offset });
   }
 
+  // Up to 50 users per call; includes statistics_rulesets (pp per mode). Unknown ids are omitted.
+  getUsers(ids) {
+    const url = new URLSearchParams();
+    for (const id of ids.slice(0, 50)) url.append('ids[]', String(id));
+    return this.get(`/users?${url}`);
+  }
+
   // page is 1-based; 50 users per page; the API serves up to rank 10,000 (page 200).
   getRanking({ mode = 'osu', country, page = 1 } = {}) {
     return this.get(`/rankings/${mode}/performance`, { country, 'cursor[page]': page });
