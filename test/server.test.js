@@ -58,6 +58,10 @@ test('job runs to completion and reports a summary', async () => {
   assert.equal(job.status, 'done', job.error);
   assert.equal(job.summary.neighbors, 30);
   assert.equal(job.summary.me.username, 'shiba_em');
+  const rec = await call('GET', `/api/jobs/${start.json.id}/recommendations?speed=NM&minPlayers=1`);
+  assert.equal(rec.status, 200);
+  assert.equal(rec.json.collectedPlayers, 30);
+  assert.ok(Array.isArray(rec.json.rows));
   const c = await call('GET', '/api/cache');
   assert.ok(c.json.entries > 30);
 });

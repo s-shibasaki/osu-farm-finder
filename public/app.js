@@ -61,6 +61,8 @@ const PHASE_LABEL = {
   done: '完了しました',
 };
 let currentJob = null;
+let lastJobStatus = null;
+let doneJob = null;
 
 function formatEta(sec) {
   if (sec == null) return '';
@@ -99,11 +101,13 @@ async function pollJob() {
   try {
     const job = await api('GET', `/api/jobs/${currentJob}`);
     showJob(job);
+    lastJobStatus = job.status;
     if (job.status === 'running') return setTimeout(pollJob, 1000);
   } catch (err) {
     $('#collect-status').textContent = `状態を確認できませんでした：${err.message}`;
   }
-  currentJob = null;
+  if (lastJobStatus === 'done') loadRecommendations();
+  else currentJob = null;
   refreshCache();
 }
 
@@ -122,6 +126,42 @@ $('#collect-form').addEventListener('submit', async (e) => {
   } catch (err) {
     $('#collect-status').textContent = `開始できませんでした：${err.message}`;
   }
+});
+
+// ---- Recommendations (step 3, temporary table) ----
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const fmtLen = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const SPEED_LABEL = { NM: '等速', DT: 'DT', HT: 'HT' };
+
+async function loadRecommendations() {
+  if (currentJob) doneJob = currentJob;
+  currentJob = null;
+  if (!doneJob) return;
+  const f = new FormData($('#rec-form'));
+  const q = new URLSearchParams();
+  for (const [k, v] of f) if (v !== '') q.set(k, v);
+  try {
+    const r = await api('GET', `/api/jobs/${doneJob}/recommendations?${q}`);
+    $('#rec').hidden = false;
+    $('#rec-summary').textContent =
+      `集めた ${r.collectedPlayers} 人のうち、ベストスコアの重なりが大きい ${r.usedPlayers} 人を「似たプレイヤー」として使いました。` +
+      `あなたのベストスコアは1位が ${r.myTop1Pp}pp、100位が ${r.myTop100Pp}pp です。該当 ${r.totalRows} 件（上位 ${r.rows.length} 件を表示）。`;
+    $('#rec-table').innerHTML =
+      '<tr><th>譜面</th><th>★</th><th>長さ</th><th>速さ</th><th>取得人数</th><th>中央値pp</th><th>よく使われるMod</th><th>あなたの現在pp</th><th>入る順位</th></tr>' +
+      r.rows.map((x) => `<tr>
+        <td><a href="https://osu.ppy.sh/b/${x.beatmapId}" target="_blank" rel="noopener">${esc(x.artist)} - ${esc(x.title)} [${esc(x.version)}]</a>${x.sameSongInMyBest ? ' <small>（別難易度で取得済みの曲）</small>' : ''}</td>
+        <td>${x.stars?.toFixed(2) ?? '-'}</td><td>${x.length != null ? fmtLen(x.length) : '-'}</td>
+        <td>${SPEED_LABEL[x.speed]}</td><td>${x.players}人</td><td>${x.medianPp}</td>
+        <td>${x.mods.slice(0, 3).map((m) => `${esc(m.mods)}×${m.count}`).join(' ')}</td>
+        <td>${x.myPp ?? '-'}</td><td>#${x.rankIfAdded}</td></tr>`).join('');
+  } catch (err) {
+    $('#rec-summary').textContent = `計算できませんでした：${err.message}`;
+  }
+}
+
+$('#rec-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  loadRecommendations();
 });
 
 $('#collect-cancel').addEventListener('click', async () => {

@@ -8,6 +8,7 @@ import { loadConfig, saveConfig, deleteConfig } from './config.js';
 import { OsuApi } from './osu-api.js';
 import { FileCache } from './cache.js';
 import { collect } from './collect.js';
+import { recommend } from './recommend.js';
 import { randomUUID } from 'node:crypto';
 
 const cache = new FileCache();
@@ -144,10 +145,26 @@ const routes = {
 
 // Routes with an id in the path: /api/jobs/:id
 async function jobRoute(req, res, url) {
-  const m = url.pathname.match(/^\/api\/jobs\/([0-9a-f-]{36})$/);
+  const m = url.pathname.match(/^\/api\/jobs\/([0-9a-f-]{36})(\/recommendations)?$/);
   if (!m) return false;
   const job = jobs.get(m[1]);
   if (!job) return sendJson(res, 404, { error: 'Job not found.' }), true;
+  if (m[2]) {
+    if (req.method !== 'GET') return false;
+    if (job.status !== 'done') return sendJson(res, 409, { error: 'Data collection has not finished yet.' }), true;
+    const q = url.searchParams;
+    const num = (k) => (q.has(k) && q.get(k) !== '' && Number.isFinite(Number(q.get(k))) ? Number(q.get(k)) : undefined);
+    const opts = {
+      minStars: num('minStars'),
+      maxStars: num('maxStars'),
+      maxLength: num('maxLength'),
+      minPlayers: num('minPlayers'),
+      similarPlayers: num('similarPlayers'),
+      speed: ['NM', 'DT', 'HT'].includes(q.get('speed')) ? q.get('speed') : 'all',
+    };
+    for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
+    return sendJson(res, 200, recommend(job.result, opts)), true;
+  }
   if (req.method === 'GET') return sendJson(res, 200, jobView(job)), true;
   if (req.method === 'DELETE') {
     job.controller.abort();
