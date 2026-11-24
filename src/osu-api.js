@@ -21,6 +21,7 @@ export class OsuApi {
     this.tokenExpiresAt = 0;
     this.queue = Promise.resolve();
     this.lastRequestAt = 0;
+    this.stats = { requests: 0, retries: 0, waitMs: 0, responseMs: 0 }; // for diagnostics
   }
 
   async getToken() {
@@ -68,13 +69,19 @@ export class OsuApi {
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
     }
     const token = await this.getToken();
+    const t0 = Date.now();
     const res = await this.fetch(url, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'x-api-version': '20240529' },
     });
+    this.stats.requests++;
+    this.stats.responseMs += Date.now() - t0;
 
     if (res.status === 429 || res.status >= 500) {
       if (attempt >= 4) throw new OsuApiError(`osu! API busy (HTTP ${res.status}). Please try again later.`, res.status, 'API_BUSY');
-      const retryAfter = Number(res.headers.get('retry-after')) || 2 ** attempt * 5;
+      const ra = Number(res.headers.get('retry-after'));
+      const retryAfter = res.headers.get('retry-after') != null && Number.isFinite(ra) ? ra : 2 ** attempt * 5;
+      this.stats.retries++;
+      this.stats.waitMs += retryAfter * 1000;
       await sleep(retryAfter * 1000);
       return this.#request(pathname, params, attempt + 1);
     }
@@ -102,6 +109,18 @@ export class OsuApi {
     const url = new URLSearchParams();
     for (const id of ids.slice(0, 50)) url.append('ids[]', String(id));
     return this.get(`/users?${url}`);
+  }
+
+  getCountryRanking({ mode = 'osu', page = 1 } = {}) {
+    return this.get(`/rankings/${mode}/country`, { 'cursor[page]': page });
+  }
+
+  getRooms(params) {
+    return this.get('/rooms', params);
+  }
+
+  getPlaylistScores(roomId, playlistId, params) {
+    return this.get(`/rooms/${roomId}/playlist/${playlistId}/scores`, params);
   }
 
   // page is 1-based; 50 users per page; the API serves up to rank 10,000 (page 200).
