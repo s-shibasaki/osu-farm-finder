@@ -4,9 +4,10 @@
 const BASE = 'https://osu.ppy.sh';
 
 export class OsuApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -40,6 +41,7 @@ export class OsuApi {
           ? 'osu! rejected the client ID or secret. Please check them in Settings.'
           : `Token request failed (HTTP ${res.status}).`,
         res.status,
+        res.status === 401 || res.status === 400 ? 'INVALID_CREDENTIALS' : 'TOKEN_ERROR',
       );
     }
     const json = await res.json();
@@ -71,7 +73,7 @@ export class OsuApi {
     });
 
     if (res.status === 429 || res.status >= 500) {
-      if (attempt >= 4) throw new OsuApiError(`osu! API busy (HTTP ${res.status}). Please try again later.`, res.status);
+      if (attempt >= 4) throw new OsuApiError(`osu! API busy (HTTP ${res.status}). Please try again later.`, res.status, 'API_BUSY');
       const retryAfter = Number(res.headers.get('retry-after')) || 2 ** attempt * 5;
       await sleep(retryAfter * 1000);
       return this.#request(pathname, params, attempt + 1);
@@ -80,8 +82,8 @@ export class OsuApi {
       this.token = null; // token may have expired early
       return this.#request(pathname, params, attempt + 1);
     }
-    if (res.status === 404) throw new OsuApiError('Not found.', 404);
-    if (!res.ok) throw new OsuApiError(`osu! API error (HTTP ${res.status}).`, res.status);
+    if (res.status === 404) throw new OsuApiError('Not found.', 404, 'NOT_FOUND');
+    if (!res.ok) throw new OsuApiError(`osu! API error (HTTP ${res.status}).`, res.status, 'API_ERROR');
     return res.json();
   }
 

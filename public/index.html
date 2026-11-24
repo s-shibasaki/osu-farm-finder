@@ -5,82 +5,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>osu! farm finder</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2746%27 fill=%27%23ff66aa%27/%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2730%27 fill=%27none%27 stroke=%27white%27 stroke-width=%278%27/%3E%3C/svg%3E">
 </head>
 <body>
+  <header class="top">
+    <div>
+      <h1>osu! farm finder</h1>
+      <p class="sub">自分と似たプレイヤーは pp を稼いでいるのに、自分はまだ稼げていない譜面を探します。</p>
+    </div>
+    <button type="button" id="open-settings" class="secondary">⚙ 設定</button>
+  </header>
+
   <main>
-    <h1>osu! farm finder</h1>
-
-    <section id="settings" class="card">
-      <h2>設定：osu! APIクライアント</h2>
-      <p class="note">
-        osu! の<a href="https://osu.ppy.sh/home/account/edit#oauth" target="_blank" rel="noopener">アカウント設定 → OAuth</a>で
-        「新しいOAuthアプリケーション」を作成し、表示されるクライアントIDとシークレットを入力してください。
-        入力内容はこのPCの中にだけ保存され、osu! 以外には送信されません。
-      </p>
-      <p id="config-status" class="status"></p>
-      <form id="config-form">
-        <label>クライアントID <input name="clientId" inputmode="numeric" autocomplete="off" required></label>
-        <label>クライアントシークレット <input name="clientSecret" type="password" autocomplete="off" required></label>
-        <button type="submit">確認して保存</button>
-        <button type="button" id="config-delete" class="secondary">保存内容を削除</button>
-      </form>
-    </section>
-
-    <section id="lookup" class="card">
-      <h2>接続確認</h2>
-      <form id="user-form">
-        <label>ユーザー名 <input name="name" required></label>
-        <button type="submit">調べる</button>
-      </form>
-      <pre id="user-result" class="status"></pre>
-    </section>
-
-    <section id="collect" class="card">
-      <h2>データ取得（開発中の試験用画面）</h2>
-      <p class="note">
-        入力したプレイヤーと pp が近いプレイヤーを集め、それぞれのベストスコアを取得します。
-        osu! への問い合わせは1秒に1回程度に抑えているため、初回は250人で4〜5分かかります。
-        取得したデータはこのPCに一時保存され、2回目以降は速くなります。
-      </p>
-      <form id="collect-form">
-        <label>ユーザー名 <input name="username" required></label>
+    <!-- Search -->
+    <section class="card">
+      <form id="search-form" class="row">
+        <label class="grow">osu! のユーザー名
+          <input name="username" required autocomplete="off" placeholder="例：shiba_em">
+        </label>
         <label>比べる相手
           <select name="scope">
             <option value="country">同じ国のプレイヤー</option>
             <option value="global">世界のプレイヤー</option>
           </select>
         </label>
-        <label>人数 <input name="count" type="number" min="20" max="1000" value="250"></label>
-        <button type="submit" id="collect-start">取得を始める</button>
-        <button type="button" id="collect-cancel" class="secondary" hidden>中止</button>
+        <label>集める人数
+          <input name="count" type="number" min="20" max="1000" value="250" class="narrow">
+        </label>
+        <div class="actions">
+          <button type="submit" id="search-start">調べる</button>
+          <button type="button" id="search-cancel" class="secondary" hidden>中止</button>
+        </div>
       </form>
-      <progress id="collect-progress" max="1" value="0" hidden></progress>
-      <pre id="collect-status" class="status"></pre>
-      <div id="rec" hidden>
-        <h3>おすすめ譜面（仮表示）</h3>
-        <form id="rec-form">
-          <label>速さ
-            <select name="speed">
-              <option value="all">すべて</option>
-              <option value="NM">等速</option>
-              <option value="DT">DT（1.5倍速）</option>
-              <option value="HT">HT（0.75倍速）</option>
-            </select>
-          </label>
-          <label>★下限 <input name="minStars" type="number" step="0.1" min="0" size="4"></label>
-          <label>★上限 <input name="maxStars" type="number" step="0.1" min="0" size="4"></label>
-          <label>長さ上限（秒） <input name="maxLength" type="number" min="0" size="5"></label>
-          <button type="submit">絞り込む</button>
-        </form>
-        <p id="rec-summary" class="note"></p>
-        <div class="table-wrap"><table id="rec-table"></table></div>
-      </div>
       <p class="note">
-        一時保存しているデータ：<span id="cache-stats">-</span>
-        <button type="button" id="cache-clear" class="secondary small">一時保存データを削除</button>
+        初回は、250人で4〜5分かかります（osu! に負担をかけないよう、問い合わせを1秒に1回程度に抑えているためです）。
+        取得したデータはこのパソコンに一時保存されるので、2回目以降はすぐに終わります。
       </p>
     </section>
+
+    <!-- Progress -->
+    <section id="progress-card" class="card" hidden>
+      <ol id="steps" class="steps">
+        <li data-phase="user">プレイヤー情報</li>
+        <li data-phase="myBest">あなたのベストスコア</li>
+        <li data-phase="ranking">ランキング</li>
+        <li data-phase="neighbors">pp が近いプレイヤーのベストスコア</li>
+      </ol>
+      <progress id="progress-bar" max="1" value="0"></progress>
+      <p id="progress-text" class="status"></p>
+    </section>
+
+    <!-- Message (errors etc.) -->
+    <p id="message" class="message" hidden></p>
+
+    <!-- Results -->
+    <section id="results" hidden>
+      <div class="card">
+        <p id="result-summary"></p>
+        <details id="similar-details">
+          <summary>似たプレイヤー（上位10人）を見る</summary>
+          <ol id="similar-list" class="similar"></ol>
+        </details>
+      </div>
+
+      <div class="card filters">
+        <div class="seg" id="speed-seg" role="group" aria-label="速さ">
+          <button type="button" data-speed="all" class="on">すべて</button>
+          <button type="button" data-speed="NM">等速</button>
+          <button type="button" data-speed="DT">DT（1.5倍速）</button>
+          <button type="button" data-speed="HT">HT（0.75倍速）</button>
+        </div>
+        <div class="row">
+          <label>★ 下限 <input id="f-minStars" type="number" step="0.1" min="0" class="narrow"></label>
+          <label>★ 上限 <input id="f-maxStars" type="number" step="0.1" min="0" class="narrow"></label>
+          <label>長さの上限
+            <select id="f-maxLength">
+              <option value="">指定なし</option>
+              <option value="60">1分</option>
+              <option value="90">1分30秒</option>
+              <option value="120">2分</option>
+              <option value="180">3分</option>
+            </select>
+          </label>
+          <label>取得人数が
+            <select id="f-minPlayers">
+              <option value="3">3人以上</option>
+              <option value="4" selected>4人以上</option>
+              <option value="6">6人以上</option>
+              <option value="10">10人以上</option>
+            </select>
+          </label>
+          <label class="check"><input id="f-retry" type="checkbox" checked> 取り直し候補（取得済みだが pp が低い譜面）も表示</label>
+        </div>
+        <p class="note">★と長さは Mod なしの値です。DT で遊ぶ場合、実際の★はこれより高く、長さは約3分の2になります。</p>
+      </div>
+
+      <p id="result-count" class="note"></p>
+      <div class="table-wrap">
+        <table id="result-table">
+          <thead>
+            <tr>
+              <th>譜面</th>
+              <th data-sort="stars" class="num sortable">★</th>
+              <th data-sort="length" class="num sortable">長さ</th>
+              <th>速さ</th>
+              <th data-sort="players" class="num sortable" title="似たプレイヤーのうち、この譜面がベストスコアに入っている人数">取得人数</th>
+              <th data-sort="medianPp" class="num sortable" title="似たプレイヤーが取った pp の中央値">中央値pp</th>
+              <th>よく使われる Mod</th>
+              <th data-sort="rankIfAdded" class="num sortable" title="中央値と同じ pp を取れた場合に、あなたのベストスコアの何位に入るか">入る順位</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </main>
+
+  <footer>
+    <span>一時保存しているデータ：<span id="cache-stats">-</span></span>
+    <button type="button" id="cache-clear" class="link">一時保存データを削除</button>
+    <span class="sep">｜</span>
+    <a href="https://github.com/s-shibasaki/osu-farm-finder#readme" target="_blank" rel="noopener">使い方（README）</a>
+  </footer>
+
+  <!-- Settings dialog -->
+  <dialog id="settings">
+    <form method="dialog" class="close-row"><button class="link" aria-label="閉じる">✕</button></form>
+    <h2>設定：osu! API クライアント</h2>
+    <p>このツールは、osu! の公式 API を使ってデータを取得します。使うには、あなた専用の「クライアントID」と「クライアントシークレット」が必要です（無料）。</p>
+    <ol class="howto">
+      <li>osu! にログインし、<a href="https://osu.ppy.sh/home/account/edit#oauth" target="_blank" rel="noopener">アカウント設定の「OAuth」欄</a>を開きます。</li>
+      <li>「新しいOAuthアプリケーション」を押し、名前に <code>osu-farm-finder</code>、コールバックURLに <code>http://localhost</code> と入力して登録します。</li>
+      <li>表示されたクライアントID（数字）とクライアントシークレットを、下に入力します。</li>
+    </ol>
+    <p id="config-status" class="status"></p>
+    <form id="config-form" class="row">
+      <label>クライアントID <input name="clientId" inputmode="numeric" autocomplete="off" required class="narrow"></label>
+      <label class="grow">クライアントシークレット <input name="clientSecret" type="password" autocomplete="off" required></label>
+      <div class="actions"><button type="submit">確認して保存</button></div>
+    </form>
+    <p class="note">
+      入力内容はこのパソコンの中にだけ保存され、osu! 以外には送信されません。保存したシークレットは画面に表示しません。
+      <button type="button" id="config-delete" class="link">保存内容を削除</button>
+    </p>
+  </dialog>
+
   <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -21,6 +21,8 @@ function jobView(job) {
     status: job.status, // running | done | error | cancelled
     progress: job.progress,
     error: job.error ?? null,
+    errorCode: job.errorCode ?? null,
+    errorDetails: job.errorDetails ?? null,
     summary: job.result
       ? {
           me: job.result.me,
@@ -92,9 +94,9 @@ const routes = {
   // Connection check: look up a user and return their basic stats.
   'GET /api/user': async (req, res, url) => {
     const client = await getApi();
-    if (!client) return sendJson(res, 400, { error: 'Please register your osu! client ID and secret in Settings first.' });
+    if (!client) return sendJson(res, 400, { error: 'Please register your osu! client ID and secret in Settings first.', code: 'NOT_CONFIGURED' });
     const name = url.searchParams.get('name');
-    if (!name) return sendJson(res, 400, { error: 'Username is required.' });
+    if (!name) return sendJson(res, 400, { error: 'Username is required.', code: 'USERNAME_REQUIRED' });
     const u = await client.getUser(name);
     sendJson(res, 200, {
       id: u.id,
@@ -109,14 +111,14 @@ const routes = {
   // Start collecting data for a player. Only one job runs at a time to respect the API rate.
   'POST /api/jobs': async (req, res) => {
     const client = await getApi();
-    if (!client) return sendJson(res, 400, { error: 'Please register your osu! client ID and secret in Settings first.' });
+    if (!client) return sendJson(res, 400, { error: 'Please register your osu! client ID and secret in Settings first.', code: 'NOT_CONFIGURED' });
     const { username, scope = 'country', count = 250 } = await readJson(req);
-    if (!username) return sendJson(res, 400, { error: 'Username is required.' });
+    if (!username) return sendJson(res, 400, { error: 'Username is required.', code: 'USERNAME_REQUIRED' });
     const n = Math.round(Number(count));
-    if (!(n >= 20 && n <= 1000)) return sendJson(res, 400, { error: 'Number of players must be between 20 and 1000.' });
-    if (!['country', 'global'].includes(scope)) return sendJson(res, 400, { error: 'Invalid scope.' });
+    if (!(n >= 20 && n <= 1000)) return sendJson(res, 400, { error: 'Number of players must be between 20 and 1000.', code: 'BAD_COUNT' });
+    if (!['country', 'global'].includes(scope)) return sendJson(res, 400, { error: 'Invalid scope.', code: 'BAD_SCOPE' });
     if ([...jobs.values()].some((j) => j.status === 'running')) {
-      return sendJson(res, 409, { error: 'Another search is still running. Please wait or cancel it.' });
+      return sendJson(res, 409, { error: 'Another search is still running. Please wait or cancel it.', code: 'JOB_RUNNING' });
     }
 
     for (const [id, j] of jobs) if (j.status !== 'running') jobs.delete(id); // keep memory small
@@ -132,8 +134,22 @@ const routes = {
       onProgress: (p) => (job.progress = p),
     })
       .then((result) => Object.assign(job, { status: 'done', result }))
-      .catch((e) => Object.assign(job, { status: job.controller.signal.aborted ? 'cancelled' : 'error', error: e.message }));
+      .catch((e) =>
+        Object.assign(job, {
+          status: job.controller.signal.aborted ? 'cancelled' : 'error',
+          error: e.message,
+          errorCode: e.code ?? 'UNKNOWN',
+          errorDetails: e.details ?? null,
+        }),
+      );
     sendJson(res, 202, jobView(job));
+  },
+
+  // The most recent finished job, so the page can show results again after a reload.
+  'GET /api/jobs/latest': async (req, res) => {
+    const list = [...jobs.values()];
+    const job = list.find((j) => j.status === 'running') ?? list.reverse().find((j) => j.status === 'done');
+    sendJson(res, 200, job ? jobView(job) : null);
   },
 
   'GET /api/cache': async (req, res) => sendJson(res, 200, await cache.stats()),
@@ -148,10 +164,10 @@ async function jobRoute(req, res, url) {
   const m = url.pathname.match(/^\/api\/jobs\/([0-9a-f-]{36})(\/recommendations)?$/);
   if (!m) return false;
   const job = jobs.get(m[1]);
-  if (!job) return sendJson(res, 404, { error: 'Job not found.' }), true;
+  if (!job) return sendJson(res, 404, { error: 'Job not found.', code: 'JOB_NOT_FOUND' }), true;
   if (m[2]) {
     if (req.method !== 'GET') return false;
-    if (job.status !== 'done') return sendJson(res, 409, { error: 'Data collection has not finished yet.' }), true;
+    if (job.status !== 'done') return sendJson(res, 409, { error: 'Data collection has not finished yet.', code: 'NOT_FINISHED' }), true;
     const q = url.searchParams;
     const num = (k) => (q.has(k) && q.get(k) !== '' && Number.isFinite(Number(q.get(k))) ? Number(q.get(k)) : undefined);
     const opts = {
@@ -163,6 +179,7 @@ async function jobRoute(req, res, url) {
       speed: ['NM', 'DT', 'HT'].includes(q.get('speed')) ? q.get('speed') : 'all',
     };
     for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
+    opts.limit = 300;
     return sendJson(res, 200, recommend(job.result, opts)), true;
   }
   if (req.method === 'GET') return sendJson(res, 200, jobView(job)), true;
@@ -206,7 +223,7 @@ export function createServer() {
       if (req.method === 'GET') return await serveStatic(res, url.pathname);
       sendJson(res, 405, { error: 'Method not allowed' });
     } catch (e) {
-      sendJson(res, e.status && e.status < 500 ? e.status : 500, { error: e.message });
+      sendJson(res, e.status && e.status < 500 ? e.status : 500, { error: e.message, code: e.code ?? (e instanceof SyntaxError ? 'BAD_REQUEST' : 'UNKNOWN') });
     }
   });
 }

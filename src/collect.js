@@ -34,7 +34,13 @@ export function compactScore(s) {
   };
 }
 
-export class CollectError extends Error {}
+export class CollectError extends Error {
+  constructor(message, code, details) {
+    super(message);
+    this.code = code;
+    this.details = details;
+  }
+}
 
 /**
  * @param {object} o
@@ -48,7 +54,7 @@ export class CollectError extends Error {}
  */
 export async function collect({ api, cache, username, scope = 'country', count = 250, onProgress = () => {}, signal }) {
   const check = () => {
-    if (signal?.aborted) throw new CollectError('Cancelled.');
+    if (signal?.aborted) throw new CollectError('Cancelled.', 'CANCELLED');
   };
   const report = (p) => onProgress({ ...p, at: Date.now() });
 
@@ -64,11 +70,13 @@ export async function collect({ api, cache, username, scope = 'country', count =
     countryRank: u.statistics?.country_rank ?? null,
   };
   const rank = scope === 'global' ? me.globalRank : me.countryRank;
-  if (!rank) throw new CollectError('This player has no rank yet, so there is no one to compare with.');
+  if (!rank) throw new CollectError('This player has no rank yet, so there is no one to compare with.', 'NO_RANK');
   if (rank > RANKING_MAX_PAGE * RANKING_PAGE_SIZE) {
     throw new CollectError(
       `The osu! API only lists the top ${RANKING_MAX_PAGE * RANKING_PAGE_SIZE} players, and this player is #${rank} ` +
         `${scope === 'global' ? 'worldwide' : 'in their country'}. Players outside that range are not supported yet.`,
+      'OUT_OF_RANGE',
+      { rank, limit: RANKING_MAX_PAGE * RANKING_PAGE_SIZE, scope },
     );
   }
 
