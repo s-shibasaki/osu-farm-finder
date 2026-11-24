@@ -74,10 +74,52 @@ test('pages are clamped near the top of the ranking', async () => {
   assert.equal(api.calls.ranking[0][1], 1);
 });
 
-test('rejects players outside the top 10,000', async () => {
+test('outside the top 10,000: gathers players from other countries, capped per country', async () => {
   const api = fakeApi();
-  api.getUser = async () => ({ id: 1, username: 'me', country_code: 'JP', statistics: { pp: 100, global_rank: 900000, country_rank: 20000 } });
-  await assert.rejects(collect({ api, cache: tmpCache(), username: 'me' }), /top 10000/);
+  api.getUser = async () => ({ id: 1, username: 'me', country_code: 'JP', statistics: { pp: 1000, global_rank: 900000, country_rank: 37000 } });
+  // Countries: XX has a deep ranking (out of range), A..F are small (in range).
+  const sizes = { XX: 500000, A: 9000, B: 8000, C: 7000, D: 6000, E: 5000, F: 4000 };
+  api.getCountryRanking = async ({ page }) => ({ ranking: page === 1 ? Object.entries(sizes).map(([code, active]) => ({ code, active_users: active })) : [] });
+  const ppAt = (n, r) => 6000 * (1 - r / n) ** 2;
+  api.getRanking = async ({ country, page }) => {
+    api.calls.ranking.push([country, page]);
+    const n = Math.min(sizes[country], 10000);
+    const rows = [];
+    for (let r = (page - 1) * 50 + 1; r <= Math.min(page * 50, n); r++) rows.push({ pp: ppAt(sizes[country], r), user: { id: country.charCodeAt(0) * 100000 + r, username: country + r } });
+    return { ranking: rows };
+  };
+  const r = await collect({ api, cache: tmpCache(), username: 'me', count: 100 });
+  assert.equal(r.scope, 'countries');
+  assert.equal(r.neighbors.length, 100);
+  assert.ok(r.neighbors.every((n) => n.pp >= 850 && n.pp <= 1150), 'all within ±15%');
+  assert.ok(r.countriesUsed.every((c) => c.players <= 20), 'at most a fifth per country');
+  assert.ok(!r.countriesUsed.some((c) => c.code === 'XX'));
+  assert.equal(r.countriesUsed.length, 5);
+  assert.ok(api.calls.ranking.length < 80, `ranking calls: ${api.calls.ranking.length}`);
+});
+
+test('fills up beyond the per-country cap when few countries reach the pp', async () => {
+  const api = fakeApi();
+  api.getUser = async () => ({ id: 1, username: 'me', country_code: 'JP', statistics: { pp: 1000, global_rank: 900000, country_rank: 37000 } });
+  const sizes = { XX: 500000, A: 9000, B: 8000 };
+  api.getCountryRanking = async ({ page }) => ({ ranking: page === 1 ? Object.entries(sizes).map(([code, active]) => ({ code, active_users: active })) : [] });
+  api.getRanking = async ({ country, page }) => {
+    const n = Math.min(sizes[country], 10000);
+    const rows = [];
+    for (let r = (page - 1) * 50 + 1; r <= Math.min(page * 50, n); r++) rows.push({ pp: 6000 * (1 - r / sizes[country]) ** 2, user: { id: country.charCodeAt(0) * 100000 + r } });
+    return { ranking: rows };
+  };
+  const r = await collect({ api, cache: tmpCache(), username: 'me', count: 100 });
+  assert.equal(r.neighbors.length, 100);
+  assert.deepEqual(r.countriesUsed.map((c) => c.code).sort(), ['A', 'B']);
+  assert.equal(r.countriesUsed.reduce((a, c) => a + c.players, 0), 100);
+});
+
+test('fails clearly when no country has players near the pp', async () => {
+  const api = fakeApi();
+  api.getUser = async () => ({ id: 1, username: 'me', country_code: 'JP', statistics: { pp: 100, global_rank: 2000000, country_rank: 90000 } });
+  api.getCountryRanking = async () => ({ ranking: [{ code: 'JP', active_users: 100000 }] });
+  await assert.rejects(collect({ api, cache: tmpCache(), username: 'me' }), (e) => e.code === 'NOT_ENOUGH_PLAYERS');
 });
 
 test('global scope omits the country filter', async () => {

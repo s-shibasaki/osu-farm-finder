@@ -27,6 +27,7 @@ function jobView(job) {
       ? {
           me: job.result.me,
           scope: job.result.scope,
+          countriesUsed: job.result.countriesUsed,
           neighbors: job.result.neighbors.length,
           myBest: job.result.myBest.length,
           ppRange: job.result.ppRange,

@@ -30,7 +30,7 @@ A tool for osu! (the rhythm game) that finds **maps where players similar to you
 
 When you enter a username, the tool builds a list of recommended maps in three steps:
 
-1. It collects a few hundred players whose total pp is close to yours, from the osu! rankings (your country or worldwide).
+1. It collects a few hundred players whose total pp is close to yours, from the osu! rankings (your country or worldwide). If you are ranked below the range the API provides (top 10,000), it collects players with similar pp from the rankings of countries with fewer players (see [Players outside the top 10,000](#players-outside-the-top-10000)).
 2. Among them, it picks the players whose top scores overlap most with yours as "similar players".
 3. It lists maps that appear often in the similar players' top scores but not in yours. For each map it shows the median pp they earned and the mods (game modifiers, for example DT = 1.5× speed) they commonly used.
 
@@ -113,6 +113,18 @@ npx github:s-shibasaki/osu-farm-finder
 - Cache lifetimes: other players' top scores 3 days, rankings 1 day, your own top scores 10 minutes. Expired data is fetched again on the next run.
 - Reloading the browser page keeps the progress and results (until the tool is stopped).
 
+### Players outside the top 10,000
+
+The osu! API provides rankings only down to rank 10,000. In Japan, rank 10,000 is about 3,200pp, so players below that cannot be compared with players from the Japanese ranking.
+
+When the player is ranked below 10,000 in the selected ranking (country or worldwide), the tool automatically switches to this method:
+
+1. Starting with the countries with the most players, it checks the pp at rank 10,000 of each country's ranking. In countries with fewer players, that pp is low, so low-pp players are still listed.
+2. In countries whose ranking reaches your pp, it finds the page listing players within ±15% of your pp and collects them.
+3. To avoid bias toward one country's taste, at most one fifth of the players come from a single country. Only if there are still not enough players is this limit exceeded.
+
+In this case you are compared with players from other countries. The summary above the list shows which countries the players came from. It takes about as long as the normal method.
+
 ### 4. Filter and sort the list
 
 | Control | What it does |
@@ -185,12 +197,12 @@ Add these after the start command, for example `npx github:s-shibasaki/osu-farm-
 | A `git` error appears while downloading | Some environments need Git to download from GitHub. Install it from [git-scm.com](https://git-scm.com/) and try again. |
 | The settings dialog says the client ID or secret is wrong | Check both values, including leading or trailing spaces, and enter them again. |
 | The player is not found | Check the spelling of the username. |
-| The page says only the top 10,000 are available | The player is ranked below 10,000 in the selected ranking (country or worldwide). See [Limitations](#limitations). Switching "比べる相手" (Compare with) may help. |
+| The page says not enough players with similar pp were found in any country | The player's pp is very low (tens to a few hundred), so almost no country ranking lists players with similar pp. Try again after earning more pp. |
 | The page says osu! is busy | osu! is under load or too many requests were sent. Wait a while and try again; collected data is kept. |
 
 ## Limitations
 
-- The osu! API returns rankings only down to **rank 10,000**, so similar players are searched within the top 10,000 of the selected ranking (country or worldwide). Players ranked below 10,000 in both are not supported yet.
+- The osu! API returns rankings only down to **rank 10,000**. Players ranked below that are compared with players collected from the rankings of countries with fewer players (see [Players outside the top 10,000](#players-outside-the-top-10000)), so they are compared with players from other countries.
 - Similarity is based only on top scores (your highest-pp plays). Lower-pp scores outside the top list are not considered.
 
 ## For developers

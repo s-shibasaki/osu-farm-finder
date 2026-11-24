@@ -133,6 +133,7 @@ export function recommend(data, opts = {}) {
   return {
     me: data.me,
     scope: data.scope,
+    countriesUsed: data.countriesUsed ?? null,
     usedPlayers: similar.length,
     collectedPlayers: neighbors.length,
     myTop1Pp: Math.round(myBestPpAt(1)),

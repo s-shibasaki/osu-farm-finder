@@ -36,6 +36,7 @@ function errorText(code, details, fallback) {
     case 'API_BUSY': return 'osu! が混み合っているため、データを取得できませんでした。しばらく待ってから、もう一度お試しください。途中までのデータは保存されているので、続きから再開できます。';
     case 'API_ERROR': return 'osu! からエラーが返されました。しばらくしてから、もう一度お試しください。';
     case 'NO_RANK': return 'このプレイヤーにはまだ順位がないため、比べる相手を探せません。';
+    case 'NOT_ENOUGH_PLAYERS': return `pp が近いプレイヤーを、どの国のランキングからも十分に見つけられませんでした（見つかったのは ${details?.found ?? 0} 人）。`;
     case 'OUT_OF_RANGE': {
       const where = details?.scope === 'global' ? '世界' : '国内';
       const other = details?.scope === 'global' ? '' : '「比べる相手」を「世界のプレイヤー」にしても範囲外の場合は、';
@@ -114,6 +115,8 @@ function showProgress(job) {
   if (p.phase === 'neighbors' && p.total) {
     const eta = p.etaSec == null ? '' : p.etaSec < 60 ? `残り約${p.etaSec}秒` : `残り約${Math.ceil(p.etaSec / 60)}分`;
     text = `${p.done} / ${p.total} 人${eta ? `（${eta}）` : ''}`;
+  } else if (p.phase === 'ranking' && p.country) {
+    text = `ランキングの範囲外のため、ほかの国のランキングから pp が近いプレイヤーを探しています（${p.done} / ${p.total} 人、確認中：${p.country}）`;
   } else if (p.phase === 'ranking' && p.total) {
     text = `${p.done} / ${p.total} ページ`;
   } else if (p.phase !== 'done') {
@@ -197,11 +200,20 @@ function renderResults() {
   if (!r) return;
   $('#results').hidden = false;
 
+  const where =
+    r.scope === 'countries'
+      ? `ほかの国のランキング（${r.countriesUsed.map((c) => `${esc(c.code)} ${c.players}人`).join('、')}）から pp が近いプレイヤー ${r.collectedPlayers} 人`
+      : `pp が近い${r.scope === 'global' ? '世界' : '国内'}のプレイヤー ${r.collectedPlayers} 人`;
+  const note =
+    r.scope === 'countries'
+      ? '<br><small>あなたの順位は、ランキングで取得できる上位1万位の外にあるため、プレイヤーの少ない国のランキングから、pp が近い人（±15%以内）を集めました。</small>'
+      : '';
   $('#result-summary').innerHTML =
-    `<strong>${esc(r.me.username)}</strong>（${fmtPp(r.me.pp)}pp）さんと pp が近い${r.scope === 'global' ? '世界' : '国内'}のプレイヤー ${r.collectedPlayers} 人を集め、` +
+    `<strong>${esc(r.me.username)}</strong>（${fmtPp(r.me.pp)}pp）さんについて、${where}を集め、` +
     `ベストスコアの重なりが大きい ${r.usedPlayers} 人を「似たプレイヤー」として比べました。<br>` +
     `あなたのベストスコアは、1位が <strong>${r.myTop1Pp}pp</strong>、100位が <strong>${r.myTop100Pp}pp</strong> です。` +
-    `「入る順位」が小さい譜面ほど、取れたときに総 pp が大きく伸びます。`;
+    `「入る順位」が小さい譜面ほど、取れたときに総 pp が大きく伸びます。` +
+    note;
 
   $('#similar-list').innerHTML = r.similarPlayers
     .map((p) => `<li><a href="https://osu.ppy.sh/users/${p.id}" target="_blank" rel="noopener">${esc(p.username)}</a>（${fmtPp(p.pp)}pp・重なり ${p.similarity} 点）</li>`)

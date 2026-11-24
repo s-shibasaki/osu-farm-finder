@@ -74,7 +74,8 @@ export class OsuApi {
 
     if (res.status === 429 || res.status >= 500) {
       if (attempt >= 4) throw new OsuApiError(`osu! API busy (HTTP ${res.status}). Please try again later.`, res.status, 'API_BUSY');
-      const retryAfter = Number(res.headers.get('retry-after')) || 2 ** attempt * 5;
+      const ra = Number(res.headers.get('retry-after'));
+      const retryAfter = res.headers.get('retry-after') != null && Number.isFinite(ra) ? ra : 2 ** attempt * 5;
       await sleep(retryAfter * 1000);
       return this.#request(pathname, params, attempt + 1);
     }
@@ -95,6 +96,10 @@ export class OsuApi {
 
   getBestScores(userId, { mode = 'osu', limit = 100, offset = 0 } = {}) {
     return this.get(`/users/${userId}/scores/best`, { mode, limit, offset });
+  }
+
+  getCountryRanking({ mode = 'osu', page = 1 } = {}) {
+    return this.get(`/rankings/${mode}/country`, { 'cursor[page]': page });
   }
 
   // page is 1-based; 50 users per page; the API serves up to rank 10,000 (page 200).
