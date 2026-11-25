@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recommend, speedOf } from '../src/recommend.js';
+import { recommend, speedOf, weightedPp, totalPpGain } from '../src/recommend.js';
 
 const sc = (beatmapId, pp, mods = [], extra = {}) => ({
   beatmapId, beatmapsetId: extra.set ?? beatmapId * 10, artist: 'A', title: 'T' + beatmapId,
@@ -79,4 +79,30 @@ test('rankIfAdded places the median pp in my top scores', () => {
   const m700 = r.rows.find((x) => x.beatmapId === 700); // 150pp; my #1 is 150 -> lands at #2
   assert.equal(m700.rankIfAdded, 2);
   assert.equal(r.myTop1Pp, 150);
+});
+
+test('weightedPp follows the osu! 0.95 weighting', () => {
+  assert.equal(weightedPp([100, 200]), 200 + 100 * 0.95);
+  assert.equal(weightedPp([]), 0);
+});
+
+test('totalPpGain inserts new maps and replaces better scores on the same map', () => {
+  const gain = totalPpGain([sc(1, 200), sc(2, 100), sc(2, 80, ['DT'])]);
+  const base = 200 + 100 * 0.95;
+  // New map at 150pp: 200, 150, 100
+  assert.ok(Math.abs(gain(3, 150) - (200 + 150 * 0.95 + 100 * 0.95 ** 2 - base)) < 1e-9);
+  // Map 2 improved from 100 to 150: 200, 150 (the old 100 is replaced; the 80 DT score never counted)
+  assert.ok(Math.abs(gain(2, 150) - (200 + 150 * 0.95 - base)) < 1e-9);
+  // A worse score on a map I have changes nothing
+  assert.equal(gain(2, 90), 0);
+});
+
+test('rows carry ppGain, and new maps gain more than retakes of the same pp', () => {
+  const r = recommend(data(), { minPlayers: 3 });
+  const m100 = r.rows.find((x) => x.beatmapId === 100);
+  const m400 = r.rows.find((x) => x.beatmapId === 400); // I already have 90pp there
+  assert.ok(m100.ppGain > 0);
+  assert.ok(m400.ppGain > 0);
+  const fresh = totalPpGain(data().myBest)(999, m400.medianPp);
+  assert.ok(m400.ppGain < fresh, 'replacing my 90pp score gains less than a brand-new map');
 });

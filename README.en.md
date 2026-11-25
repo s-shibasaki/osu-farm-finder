@@ -134,7 +134,7 @@ In this case you are compared with players from other countries. The summary abo
 | "長さの上限" (Max length) | Filters by song length (without mods) |
 | "取得人数が○人以上" (At least N players) | Shows only maps that at least N similar players have in their top scores. Higher values give more reliable picks. |
 | "取り直し候補も表示" (Show retry candidates) | Uncheck to hide maps that are already in your top scores |
-| Column headers (★, length, players, median pp, rank if added) | Click to sort; click again to reverse |
+| Column headers (★, length, players, median pp, rank if added, total pp gain) | Click to sort; click again to reverse |
 
 Example filtered to DT (1.5× speed):
 
@@ -152,6 +152,7 @@ Example filtered to DT (1.5× speed):
 | 中央値pp (Median pp) | Median pp those players earned. Hover to see the minimum and maximum. |
 | よく使われる Mod (Common mods) | Mod combinations used and how many players used them (NM = no mod) |
 | 入る順位 (Rank if added) | Where a score with the median pp would land in your top scores |
+| 増える総pp (Total pp gain) | How much your total pp would rise with a score worth the median pp (see step 5 below). Retry candidates gain less than new maps at the same rank, because the new score replaces your current one. |
 
 Maps taken by players who are more similar to you are ranked higher.
 
@@ -161,6 +162,7 @@ Maps taken by players who are more similar to you are ranked higher.
 2. The 60 players with the highest scores are the "similar players".
 3. Count the maps in the similar players' top scores separately for each speed (normal, DT, HT). Maps taken by at least 4 players (adjustable) are listed.
 4. Maps already in your top scores are kept as "retry candidates" only if your pp is below 85% of the similar players' median.
+5. "Total pp gain" follows how osu! calculates total pp: your top scores are sorted by pp, and the n-th score counts for its pp × 0.95^(n−1). The tool shows the difference in that sum with and without a score worth the median pp. osu! counts only your best score per map, so if you already have a score on the map, the new score replaces it. The small bonus for the number of maps played does not change when one score is added, so it is left out.
 
 ### 5. Stop the tool
 

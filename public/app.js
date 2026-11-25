@@ -212,7 +212,7 @@ function renderResults() {
     `<strong>${esc(r.me.username)}</strong>（${fmtPp(r.me.pp)}pp）さんについて、${where}を集め、` +
     `ベストスコアの重なりが大きい ${r.usedPlayers} 人を「似たプレイヤー」として比べました。<br>` +
     `あなたのベストスコアは、1位が <strong>${r.myTop1Pp}pp</strong>、100位が <strong>${r.myTop100Pp}pp</strong> です。` +
-    `「入る順位」が小さい譜面ほど、取れたときに総 pp が大きく伸びます。` +
+    `「増える総pp」は、似たプレイヤーの中央値と同じ pp を取れた場合に、あなたの総 pp が増える量の目安です。` +
     note;
 
   $('#similar-list').innerHTML = r.similarPlayers
@@ -258,6 +258,7 @@ function renderResults() {
         <td class="num" title="最小 ${x.minPp}pp ～ 最大 ${x.maxPp}pp"><strong>${x.medianPp}</strong></td>
         <td>${mods}</td>
         <td class="num">#${x.rankIfAdded}</td>
+        <td class="num gain"><strong>+${x.ppGain.toFixed(1)}</strong></td>
       </tr>`;
     })
     .join('');

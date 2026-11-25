@@ -1,6 +1,6 @@
 {
   "name": "osu-farm-finder",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Find osu! pp farm maps that players similar to you have farmed but you haven't. Runs locally with your own osu! API client.",
   "license": "MIT",
   "type": "module",

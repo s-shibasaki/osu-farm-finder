@@ -8,6 +8,7 @@
 //    collect the pp they got. Maps are counted separately for normal speed,
 //    DT/NC (1.5x) and HT (0.75x), because speed changes pp a lot.
 // 4. Drop maps you already have unless your pp there is clearly lower than theirs.
+// 5. Estimate how much your total pp would rise if you matched their median pp.
 
 export const DEFAULTS = {
   similarPlayers: 60, // how many of the most similar players to use
@@ -29,6 +30,42 @@ const median = (xs) => {
   const m = s.length >> 1;
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
+
+// osu! total pp = sum of your top scores, sorted from highest pp, where the n-th score
+// counts for pp × 0.95^(n-1). (The small bonus for the number of maps played does not
+// change when one score is added, so it is left out.)
+export const WEIGHT = 0.95;
+const MAX_COUNTED = 200; // we fetch at most 200 of your top scores
+
+export function weightedPp(pps) {
+  const s = [...pps].sort((a, b) => b - a).slice(0, MAX_COUNTED);
+  let total = 0;
+  let w = 1;
+  for (const pp of s) {
+    total += pp * w;
+    w *= WEIGHT;
+  }
+  return total;
+}
+
+/**
+ * Returns gain(beatmapId, pp): how much your weighted total pp would rise if you set a
+ * score worth `pp` on that map. osu! keeps only your best score per map (whatever the
+ * mods), so a better score replaces the old one, and a worse one changes nothing.
+ */
+export function totalPpGain(myBest) {
+  const bestPerMap = new Map();
+  for (const s of myBest) bestPerMap.set(s.beatmapId, Math.max(bestPerMap.get(s.beatmapId) ?? 0, s.pp));
+  const pps = [...bestPerMap.values()].sort((a, b) => b - a);
+  const base = weightedPp(pps);
+  return (beatmapId, pp) => {
+    const old = bestPerMap.get(beatmapId);
+    if (old != null && pp <= old) return 0;
+    const next = [...pps, pp];
+    if (old != null) next.splice(pps.indexOf(old), 1); // the new score replaces the old one
+    return Math.max(0, weightedPp(next) - base);
+  };
+}
 
 /**
  * @param {object} data  result of collect()
@@ -94,6 +131,8 @@ export function recommend(data, opts = {}) {
     return i === -1 ? myPps.length + 1 : i + 1;
   };
 
+  const gainFor = totalPpGain(myBest);
+
   const rows = [];
   for (const g of groups.values()) {
     if (g.players < o.minPlayers) continue;
@@ -126,6 +165,7 @@ export function recommend(data, opts = {}) {
       myPp: myPp != null ? Math.round(myPp) : null,
       sameSongInMyBest: !myMaps.has(m.beatmapId) && mySets.has(m.beatmapsetId),
       rankIfAdded: rankIfAdded(medianPp), // where the median pp would land in your top scores
+      ppGain: Math.round(gainFor(m.beatmapId, medianPp) * 10) / 10, // how much your total pp would rise
     });
   }
   rows.sort((a, b) => b.score - a.score || b.medianPp - a.medianPp);
