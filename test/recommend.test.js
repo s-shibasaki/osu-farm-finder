@@ -106,3 +106,28 @@ test('rows carry ppGain, and new maps gain more than retakes of the same pp', ()
   const fresh = totalPpGain(data().myBest)(999, m400.medianPp);
   assert.ok(m400.ppGain < fresh, 'replacing my 90pp score gains less than a brand-new map');
 });
+
+test('expectedGain = ppGain × share of similar players, and rows are ordered by it', () => {
+  const r = recommend(data(), { minPlayers: 3 });
+  for (const x of r.rows) {
+    // ppGain is shown rounded to 0.1 while expectedGain uses the unrounded value, so allow that much.
+    assert.ok(Math.abs(x.expectedGain - (x.ppGain * x.players) / r.usedPlayers) <= (0.05 * x.players) / r.usedPlayers + 0.01, `${x.beatmapId}: ${x.expectedGain} vs ${x.ppGain}×${x.players}/${r.usedPlayers}`);
+  }
+  for (let i = 1; i < r.rows.length; i++) assert.ok(r.rows[i - 1].expectedGain >= r.rows[i].expectedGain);
+});
+
+test('a rewarding map taken by few players ranks below a decent map taken by many', () => {
+  // me: a few top scores; 10 similar players all share map 1 with me.
+  const myBest = [sc(1, 100), sc(2, 90), sc(3, 80)];
+  const neighbors = Array.from({ length: 10 }, (_, i) => ({
+    id: 100 + i, username: 'n' + i, pp: 1000,
+    best: [sc(1, 100), sc(50, 95)] // everyone has map 50 at 95pp
+      .concat(i < 3 ? [sc(60, 150)] : []), // only 3 players have map 60 at 150pp
+  }));
+  const r = recommend({ me: { id: 1 }, scope: 'country', myBest, neighbors }, { minPlayers: 3 });
+  const m50 = r.rows.find((x) => x.beatmapId === 50);
+  const m60 = r.rows.find((x) => x.beatmapId === 60);
+  assert.ok(m60.ppGain > m50.ppGain, 'map 60 would add more pp if you got it');
+  assert.ok(m50.expectedGain > m60.expectedGain, 'but map 50 is more likely');
+  assert.equal(r.rows[0].beatmapId, 50);
+});

@@ -9,6 +9,8 @@
 //    DT/NC (1.5x) and HT (0.75x), because speed changes pp a lot.
 // 4. Drop maps you already have unless your pp there is clearly lower than theirs.
 // 5. Estimate how much your total pp would rise if you matched their median pp.
+// 6. Expected gain = that rise × the share of similar players who have the map, so maps that
+//    are both rewarding and within reach come first.
 
 export const DEFAULTS = {
   similarPlayers: 60, // how many of the most similar players to use
@@ -166,9 +168,11 @@ export function recommend(data, opts = {}) {
       sameSongInMyBest: !myMaps.has(m.beatmapId) && mySets.has(m.beatmapsetId),
       rankIfAdded: rankIfAdded(medianPp), // where the median pp would land in your top scores
       ppGain: Math.round(gainFor(m.beatmapId, medianPp) * 10) / 10, // how much your total pp would rise
+      // rise × share of similar players who have this map (a rough "how likely you can get it")
+      expectedGain: Math.round(((gainFor(m.beatmapId, medianPp) * g.players) / similar.length) * 100) / 100,
     });
   }
-  rows.sort((a, b) => b.score - a.score || b.medianPp - a.medianPp);
+  rows.sort((a, b) => b.expectedGain - a.expectedGain || b.score - a.score || b.medianPp - a.medianPp);
 
   return {
     me: data.me,

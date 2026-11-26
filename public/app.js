@@ -172,7 +172,8 @@ $('#search-form').addEventListener('submit', async (e) => {
 $('#search-cancel').addEventListener('click', () => jobId && api('DELETE', `/api/jobs/${jobId}`));
 
 // ---------- results ----------
-const filters = { speed: 'all', sort: null, sortDir: -1 };
+// Default order: the server's order (largest expected gain first).
+const filters = { speed: 'all', sort: 'expectedGain', sortDir: -1 };
 let lastResult = null;
 
 function currentQuery() {
@@ -212,7 +213,7 @@ function renderResults() {
     `<strong>${esc(r.me.username)}</strong>（${fmtPp(r.me.pp)}pp）さんについて、${where}を集め、` +
     `ベストスコアの重なりが大きい ${r.usedPlayers} 人を「似たプレイヤー」として比べました。<br>` +
     `あなたのベストスコアは、1位が <strong>${r.myTop1Pp}pp</strong>、100位が <strong>${r.myTop100Pp}pp</strong> です。` +
-    `「増える総pp」は、似たプレイヤーの中央値と同じ pp を取れた場合に、あなたの総 pp が増える量の目安です。` +
+    `一覧は「期待できる伸び」（増える総pp × その譜面を取った似たプレイヤーの割合）が大きい順です。伸びが大きく、しかも取れている人が多い譜面ほど上に来ます。` +
     note;
 
   $('#similar-list').innerHTML = r.similarPlayers
@@ -258,7 +259,8 @@ function renderResults() {
         <td class="num" title="最小 ${x.minPp}pp ～ 最大 ${x.maxPp}pp"><strong>${x.medianPp}</strong></td>
         <td>${mods}</td>
         <td class="num">#${x.rankIfAdded}</td>
-        <td class="num gain"><strong>+${x.ppGain.toFixed(1)}</strong></td>
+        <td class="num">+${x.ppGain.toFixed(1)}</td>
+        <td class="num gain"><strong>+${x.expectedGain.toFixed(2)}</strong></td>
       </tr>`;
     })
     .join('');

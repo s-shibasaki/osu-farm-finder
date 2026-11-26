@@ -125,6 +125,10 @@ When the player is ranked below 10,000 in the selected ranking (country or world
 
 In this case you are compared with players from other countries. The summary above the list shows which countries the players came from. It takes about as long as the normal method.
 
+Example for a player ranked about 37,000th in Japan (about 1,100pp). Players were collected 50 each from the rankings of Turkey, Spain, South Korea, Peru and Italy.
+
+![Example for a player outside the top 10,000](docs/images/results-countries.png)
+
 ### 4. Filter and sort the list
 
 | Control | What it does |
@@ -134,7 +138,7 @@ In this case you are compared with players from other countries. The summary abo
 | "長さの上限" (Max length) | Filters by song length (without mods) |
 | "取得人数が○人以上" (At least N players) | Shows only maps that at least N similar players have in their top scores. Higher values give more reliable picks. |
 | "取り直し候補も表示" (Show retry candidates) | Uncheck to hide maps that are already in your top scores |
-| Column headers (★, length, players, median pp, rank if added, total pp gain) | Click to sort; click again to reverse |
+| Column headers (★, length, players, median pp, rank if added, total pp gain, expected gain) | Click to sort; click again to reverse |
 
 Example filtered to DT (1.5× speed):
 
@@ -153,8 +157,11 @@ Example filtered to DT (1.5× speed):
 | よく使われる Mod (Common mods) | Mod combinations used and how many players used them (NM = no mod) |
 | 入る順位 (Rank if added) | Where a score with the median pp would land in your top scores |
 | 増える総pp (Total pp gain) | How much your total pp would rise with a score worth the median pp (see step 5 below). Retry candidates gain less than new maps at the same rank, because the new score replaces your current one. |
+| 期待できる伸び (Expected gain) | Total pp gain multiplied by the share of similar players who have this map (players ÷ number of similar players). It reflects both how much you would gain and how likely you are to get it. |
 
-Maps taken by players who are more similar to you are ranked higher.
+The list is first sorted by "期待できる伸び" (Expected gain), largest first: maps that would add a lot of pp and that many similar players have managed to get come first.
+
+The list is not sorted by total pp gain alone, because that puts high-star maps taken by only a few players at the top. Those are maps where only a few similar players earned high pp, so you are less likely to get them. To focus on the size of the gain, click the "増える総pp" (Total pp gain) header.
 
 #### How the recommendations are calculated
 
@@ -163,6 +170,7 @@ Maps taken by players who are more similar to you are ranked higher.
 3. Count the maps in the similar players' top scores separately for each speed (normal, DT, HT). Maps taken by at least 4 players (adjustable) are listed.
 4. Maps already in your top scores are kept as "retry candidates" only if your pp is below 85% of the similar players' median.
 5. "Total pp gain" follows how osu! calculates total pp: your top scores are sorted by pp, and the n-th score counts for its pp × 0.95^(n−1). The tool shows the difference in that sum with and without a score worth the median pp. osu! counts only your best score per map, so if you already have a score on the map, the new score replaces it. The small bonus for the number of maps played does not change when one score is added, so it is left out.
+6. "Expected gain" is the total pp gain from step 5 multiplied by the share of similar players who have the map (players ÷ number of similar players).
 
 ### 5. Stop the tool
 
